@@ -1,11 +1,18 @@
 import { useState } from "react"
-import { GptMessage, MyMessage, TextMessageBox, TypingLoader } from "../../components"
+import { GptMessage, GptOrthographyMessage, MyMessage, TextMessageBox, TypingLoader } from "../../components"
+import { orthograpyUseCase } from "../../../core/use-cases";
 
 
 interface Message {
   text: string;
   isGpt: boolean;
+  info?: {
+    userScore: number;
+    errors: string[];
+    message: string;
+  }
 }
+
 
 export const OrthographyPage = () => {
 
@@ -16,11 +23,19 @@ export const OrthographyPage = () => {
     setIsLoading( true );
     setMessages( (prev) => [...prev, { text: text, isGpt: false }] );
 
-    // TODO: UseCase
+    const { ok, errors, message, userScore } = await orthograpyUseCase( text );
 
-    setIsLoading( false );
+    if ( !ok ) {
+      setMessages( (prev) => [...prev, { text: 'No se pudo realizar la corrección', isGpt: true }] );
+    } else {
+      setMessages( (prev) => [...prev, { 
+        text: message, isGpt: true,
+        info: { errors, message, userScore }
+      }] );
+    }
 
     // TODO: Anadir el mensage de isGPT en true
+    setIsLoading( false );
   }
 
 
@@ -33,10 +48,16 @@ export const OrthographyPage = () => {
           <GptMessage text="Hola, puedes escribir tu texto en español, y te ayudo con las correcciones" />
 
           {
-            messages.map( (message, index ) => (
+            messages.map( ( message, index ) => (
               message.isGpt
                 ? (
-                  <GptMessage key={ index } text="Esto es de OpenAI" /> 
+                  <GptOrthographyMessage 
+                    key={ index } 
+                    { ...message.info! }
+                    // userScore={ message.info!.userScore}
+                    // errors={ message.info!.errors}
+                    // message={ message.info!.message}
+                  /> 
                 )
                 : (
                   <MyMessage key={ index } text={ message.text} />
@@ -51,8 +72,6 @@ export const OrthographyPage = () => {
               </div>
             )
           }
-          
-          
 
         </div>
       </div>
